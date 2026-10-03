@@ -1,0 +1,47 @@
+{
+  "name": "nexuscare",
+  "private": true,
+  "description": "Nexus Care — AI-assisted telemedicine and healthcare management platform (prototype).",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run build:shared && concurrently -k -n shared,api,web -c gray,blue,magenta \"npm:dev:shared\" \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:shared": "npm run dev -w @nexuscare/shared",
+    "dev:api": "npm run dev -w @nexuscare/api",
+    "dev:web": "npm run dev -w @nexuscare/web",
+    "db:local": "node scripts/local-db.mjs",
+    "build:shared": "npm run build -w @nexuscare/shared",
+    "build": "npm run build:shared && npm run build -w @nexuscare/api && npm run build -w @nexuscare/web",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "test": "npm run build:shared && npm run test --workspaces --if-present",
+    "check": "npm run format:check && npm run typecheck && npm run lint && npm run test && npm run build",
+    "db:migrate": "npm run db:migrate -w @nexuscare/api",
+    "admin:create": "npm run admin:create -w @nexuscare/api --"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^24.19.1",
+    "concurrently": "^10.0.5",
+    "embedded-postgres": "^18.4.0-beta.17",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.3"
+  }
+}
