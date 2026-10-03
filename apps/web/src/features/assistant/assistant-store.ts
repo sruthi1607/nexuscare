@@ -1,38 +1,47 @@
 import { useSyncExternalStore } from 'react';
 import type { AssistantCitation, AssistantMessage, SuggestedPrompt } from './types';
+import { monitoringStore } from '../monitoring/monitoring-store';
+import { treatmentStore } from '../treatment/treatment-store';
+import { getStoredDemoMedicalProfile } from '../medical/api';
 
-const STORAGE_KEY = 'nexuscare_ai_assistant_history_v1';
+const STORAGE_KEY = 'nexuscare_ai_assistant_history_v2';
 
 export const SUGGESTED_PROMPTS: SuggestedPrompt[] = [
   {
-    id: 'p-1',
-    label: 'What does HbA1c 6.8% mean?',
-    category: 'diabetes',
-    prompt: 'Can you explain what an HbA1c of 6.8% means and how it relates to diabetes management?',
-  },
-  {
-    id: 'p-2',
-    label: 'How does Telmisartan lower blood pressure?',
-    category: 'medication',
-    prompt: 'How does my prescribed Telmisartan 40mg work to protect my heart and control blood pressure?',
-  },
-  {
-    id: 'p-3',
-    label: 'Best time to take Metformin 500mg?',
-    category: 'medication',
-    prompt: 'When is the best time of day to take Metformin 500mg, and should I take it with food?',
-  },
-  {
-    id: 'p-4',
-    label: 'Emergency signs vs stable chest discomfort?',
+    id: 'p-hr',
+    label: 'What is my heart rate?',
     category: 'cardiac',
-    prompt: 'What are the red-flag emergency symptoms for cardiovascular issues that require immediate emergency care?',
+    prompt: 'What is my heart rate right now and is it within normal limits?',
   },
   {
-    id: 'p-5',
-    label: 'Diet tips to lower triglycerides naturally?',
+    id: 'p-spo2',
+    label: 'What does my SpO2 mean?',
+    category: 'cardiac',
+    prompt: 'What does my SpO2 mean and what is my current oxygen saturation?',
+  },
+  {
+    id: 'p-bp',
+    label: 'Explain my blood pressure.',
+    category: 'cardiac',
+    prompt: 'Explain my blood pressure reading and what the numbers mean.',
+  },
+  {
+    id: 'p-meds',
+    label: 'What medicines am I taking?',
+    category: 'medication',
+    prompt: 'What medicines am I taking and when should I take them?',
+  },
+  {
+    id: 'p-ecg',
+    label: 'What is my ECG pattern?',
+    category: 'cardiac',
+    prompt: 'What is my ECG pattern showing on my connected telemetry?',
+  },
+  {
+    id: 'p-med-info',
+    label: 'Explain my medical information.',
     category: 'lifestyle',
-    prompt: 'What dietary changes can help lower triglycerides and bad LDL cholesterol?',
+    prompt: 'Explain my medical information, chronic conditions, and recorded allergies.',
   },
 ];
 
@@ -41,12 +50,12 @@ const INITIAL_MESSAGES: AssistantMessage[] = [
     id: 'msg-init-1',
     role: 'assistant',
     content:
-      'Hello Sarah! I am your Nexus Care AI Health Assistant. I can help explain medical terms, medication schedules, lab test results, and evidence-based wellness guidelines grounded in peer-reviewed clinical sources.\n\n*Note: I provide health information only and do not replace personalized clinical advice from your physician, Dr. Arvind Mehta.*',
-    timestamp: '2026-10-03T10:00:00.000Z',
+      'Hello Sarah! I am your Nexus Care AI Health Assistant.\n\nI can answer questions about your real-time biometrics, medication reminders, medical conditions, and clinical guidelines.\n\n**Disclaimer:** *Nexus AI provides general health information and does not replace professional medical advice.*',
+    timestamp: new Date().toISOString(),
     citations: [
       {
-        sourceName: 'Nexus Clinical Knowledge Base',
-        publication: 'Peer-reviewed evidence guidelines',
+        sourceName: 'Nexus Evidence Knowledge Base',
+        publication: 'Peer-reviewed clinical guidelines & patient telemetry integration',
         evidenceGrade: 'Grade A',
       },
     ],
@@ -60,78 +69,95 @@ function generateAiResponse(userPrompt: string): {
   isEmergencyAlert: boolean;
 } {
   const p = userPrompt.toLowerCase();
+  const vitals = monitoringStore.getState().currentVitals;
+  const medicines = treatmentStore.getState().medicines;
+  const medicalProfile = getStoredDemoMedicalProfile();
 
   if (
     p.includes('chest pain') ||
     p.includes('heart attack') ||
     p.includes('left arm') ||
     p.includes('jaw pain') ||
-    p.includes('shortness of breath') ||
+    p.includes('severe shortness of breath') ||
     p.includes('emergency')
   ) {
     return {
       content:
-        '⚠️ **CRITICAL EMERGENCY WARNING:** If you or someone around you is experiencing acute chest tightness, crushing pain radiating to the jaw, neck, back, or left arm, severe shortness of breath, or cold sweats, **call emergency services (112 or 911) immediately**.\n\nDo not wait or drive yourself to the hospital. Emergency medical responders can begin treatment on arrival.\n\nFor mild, stable questions or follow-ups, your cardiologist Dr. Arvind Mehta can review your historical telemetry during your appointment.',
+        '⚠️ **CRITICAL EMERGENCY WARNING:** If you or someone around you is experiencing acute crushing chest pressure, pain radiating to the jaw/arm/back, extreme shortness of breath, or cold sweats, **call emergency services (112 or 911) immediately**.\n\nNexus Care has also made the **108 Ambulance Dispatch** and **Emergency SOS** triggers available on your Health Monitoring dashboard.\n\n*Nexus AI provides general health information and does not replace professional medical advice.*',
       citations: [
         {
           sourceName: 'American Heart Association (AHA)',
-          publication: 'Guidelines for Acute Coronary Syndrome Triage',
-          evidenceGrade: 'Grade A Evidence',
+          publication: 'Guidelines for Acute Coronary Syndrome Triage Protocols',
+          evidenceGrade: 'Class I Recommendation',
         },
         {
           sourceName: 'World Health Organization (WHO)',
-          publication: 'Cardiovascular Emergency Recognition Protocols',
+          publication: 'Emergency Cardiovascular First-Response Guidelines',
         },
       ],
       isEmergencyAlert: true,
     };
   }
 
-  if (p.includes('hba1c') || p.includes('sugar') || p.includes('glucose') || p.includes('diabetes')) {
+  // Heart Rate
+  if (p.includes('heart rate') || p.includes('pulse') || p.includes('bpm')) {
+    const hr = vitals.heartRate;
+    const isElevated = hr > 100;
+    const isLow = hr < 60;
+    const statusText = isElevated
+      ? 'elevated (tachycardia range)'
+      : isLow
+        ? 'below standard baseline (bradycardia range)'
+        : 'within normal resting adult limits (60–100 bpm)';
+
     return {
-      content:
-        '**Understanding HbA1c (Glycated Hemoglobin):**\n\n• **What it measures:** HbA1c reflects your average blood sugar concentration over the past 2 to 3 months by measuring the percentage of hemoglobin coated with glucose.\n• **Interpretation of 6.8%:**\n  - Normal: Under 5.7%\n  - Prediabetes: 5.7% to 6.4%\n  - Diabetes management target: 6.5% to 7.0% for most adults\n• **Your Plan:** Your 6.8% reading indicates good progress under active management. Continuing your prescribed Metformin 500mg ER along with portion-controlled complex carbohydrates helps maintain stability.',
+      content: `**Your Current Heart Rate:**\n\n• **Live Reading:** **${hr} bpm** (beats per minute)\n• **Assessment:** Your current resting heart rate is ${statusText}.\n• **Normal Range:** A standard healthy resting heart rate for adults ranges between 60 and 100 bpm.\n• **Context:** Heart rate naturally fluctuates with physical exertion, stress, hydration, caffeine, and ambient temperature.\n\n*Nexus AI provides general health information and does not replace professional medical advice.*`,
       citations: [
         {
-          sourceName: 'American Diabetes Association (ADA)',
-          publication: 'Standards of Medical Care in Diabetes (2026)',
+          sourceName: 'American Heart Association (AHA)',
+          publication: 'Target Heart Rates & Resting Pulse Standards',
           evidenceGrade: 'Grade A Consensus',
         },
         {
           sourceName: 'Mayo Clinic Health Information',
-          publication: 'HbA1c Test Overview & Targets',
+          publication: 'Heart Rate: What is normal?',
         },
       ],
-      isEmergencyAlert: false,
+      isEmergencyAlert: isElevated,
     };
   }
 
-  if (p.includes('metformin')) {
+  // SpO2 / Oxygen Saturation
+  if (p.includes('spo2') || p.includes('oxygen') || p.includes('saturation')) {
+    const spo2 = vitals.spO2;
+    const isHypoxic = spo2 < 95;
+
     return {
-      content:
-        '**Metformin 500mg Guidance:**\n\n1. **Timing:** Best taken with or immediately following your main meals (e.g. Breakfast and Dinner). Taking it with food significantly reduces stomach upset or nausea.\n2. **Mechanism:** It decreases the amount of glucose your liver produces and improves your body’s sensitivity to insulin.\n3. **Important Tip:** Do not crush or chew extended-release (ER) tablets; swallow them whole with a glass of water.',
+      content: `**Your Current Blood Oxygen (SpO2):**\n\n• **Live Reading:** **${spo2}% SpO2**\n• **What SpO2 Measures:** Oxygen saturation (SpO2) measures the percentage of hemoglobin in your red blood cells carrying oxygen from your lungs throughout your body.\n• **Clinical Targets:**\n  - **Normal & Healthy:** 95% to 100%\n  - **Mild Hypoxia / Borderline:** 91% to 94%\n  - **Critical:** Below 90% requires immediate medical attention\n• **Your Status:** Your reading of ${spo2}% indicates ${
+        isHypoxic ? 'lowered oxygen saturation that warrants resting and monitoring' : 'excellent tissue oxygen delivery'
+      }.\n\n*Nexus AI provides general health information and does not replace professional medical advice.*`,
       citations: [
         {
-          sourceName: 'US National Library of Medicine (PubMed)',
-          publication: 'Metformin Clinical Pharmacology & Dosing Guidelines',
-        },
-        {
-          sourceName: 'British National Formulary (BNF)',
-          publication: 'Biguanides Clinical Monograph',
+          sourceName: 'World Health Organization (WHO)',
+          publication: 'Pulse Oximetry Training Manual & Hypoxia Recognition',
+          evidenceGrade: 'Grade A Evidence',
         },
       ],
-      isEmergencyAlert: false,
+      isEmergencyAlert: isHypoxic,
     };
   }
 
-  if (p.includes('telmisartan') || p.includes('blood pressure') || p.includes('hypertension')) {
+  // Blood Pressure
+  if (p.includes('blood pressure') || p.includes('bp') || p.includes('systolic') || p.includes('diastolic')) {
+    const sys = vitals.bloodPressureSystolic;
+    const dia = vitals.bloodPressureDiastolic;
+
     return {
-      content:
-        '**Telmisartan 40mg Mechanism & BP Control:**\n\n• **How it works:** Telmisartan is an Angiotensin II Receptor Blocker (ARB). It prevents angiotensin II from constricting your blood vessels, allowing them to widen so blood flows smoothly with reduced cardiac resistance.\n• **Cardiovascular Protection:** ARBs have renal and cardiac protective properties, especially beneficial for individuals managing borderline blood sugars.\n• **Target:** Your recent telemetry of 122/80 mmHg indicates that Telmisartan 40mg is effectively keeping your blood pressure in the optimal target zone.',
+      content: `**Your Current Blood Pressure:**\n\n• **Live Reading:** **${sys}/${dia} mmHg**\n• **Understanding the Numbers:**\n  - **Systolic (${sys} mmHg):** The pressure in your blood vessels when your heart contracts.\n  - **Diastolic (${dia} mmHg):** The pressure in your blood vessels when your heart rests between beats.\n• **Target Categories:**\n  - **Normal:** < 120/< 80 mmHg\n  - **Elevated:** 120–129/< 80 mmHg\n  - **Hypertension Stage 1:** 130–139/80–89 mmHg\n• **Your Plan:** You are taking **Telmisartan 40mg** daily as prescribed by Dr. Arvind Mehta, which helps keep your vascular resistance controlled.\n\n*Nexus AI provides general health information and does not replace professional medical advice.*`,
       citations: [
         {
-          sourceName: 'European Society of Cardiology (ESC)',
-          publication: 'Guidelines on Arterial Hypertension Management',
+          sourceName: 'American College of Cardiology / AHA',
+          publication: 'High Blood Pressure Clinical Practice Guidelines',
           evidenceGrade: 'Class I Recommendation',
         },
       ],
@@ -139,36 +165,71 @@ function generateAiResponse(userPrompt: string): {
     };
   }
 
-  if (p.includes('triglyceride') || p.includes('cholesterol') || p.includes('diet') || p.includes('food')) {
+  // Medicines
+  if (p.includes('medicine') || p.includes('medication') || p.includes('pill') || p.includes('taking') || p.includes('drug')) {
+    const medList = medicines.map((m) => `• **${m.name}** (${m.strength}) — [${m.instructions}]`).join('\n');
+
     return {
-      content:
-        '**Evidence-Based Nutrition for Lipid Control:**\n\n• **Reduce Refined Sugars:** Triglycerides respond rapidly to dietary changes. Minimizing sweetened beverages and ultra-processed bakery items significantly lowers levels.\n• **Healthy Fats:** Incorporate heart-healthy unsaturated fats such as olive oil, walnuts, chia seeds, and omega-3 rich foods.\n• **Soluble Fiber:** Oats, beans, lentils, and flaxseed bind cholesterol in the digestive system and drag it out of the body.\n• **Physical Activity:** 30 minutes of moderate brisk walking 5 days a week helps increase protective HDL cholesterol.',
+      content: `**Your Current Active Medications:**\n\n${medList}\n\n**Key Safety Reminders:**\n1. Take **Telmisartan 40mg** in the morning to maintain continuous 24-hour blood pressure control.\n2. Take **Metformin 500mg ER** with meals (Breakfast & Dinner) to prevent stomach upset.\n3. Take **Vitamin D3** once weekly on Sundays.\n\n*Nexus AI provides general health information and does not replace professional medical advice.*`,
       citations: [
         {
-          sourceName: 'American Heart Association (AHA)',
-          publication: 'Dietary Strategies for Hypertriglyceridemia Management',
+          sourceName: 'US National Library of Medicine (PubMed)',
+          publication: 'Prescription Drug Information & Adherence Guidelines',
         },
         {
-          sourceName: 'Harvard T.H. Chan School of Public Health',
-          publication: 'The Nutrition Source: Fats & Cholesterol',
+          sourceName: 'American Diabetes Association (ADA)',
+          publication: 'Standards of Medical Care in Diabetes',
         },
       ],
       isEmergencyAlert: false,
     };
   }
 
-  // Default helpful response
+  // ECG Pattern
+  if (p.includes('ecg') || p.includes('ekg') || p.includes('sinus') || p.includes('rhythm') || p.includes('waveform')) {
+    return {
+      content: `**Your Telemetry ECG Pattern Analysis:**\n\n• **Rhythm Classification:** **Normal Sinus Rhythm**\n• **Waveform Markers:**\n  - **P-Wave:** Normal upright deflection indicating consistent atrial depolarization.\n  - **QRS Complex:** Narrow (< 100 ms duration), indicating rapid ventricular conduction.\n  - **T-Wave:** Normal repolarization with no acute ST-segment elevation or depression.\n• **Heart Rate Synchronicity:** Regular R-R interval spacing conforming to your live pulse rate of ${vitals.heartRate} bpm.\n\n*Note: Smartwatch/wearable single-lead ECG telemetry provides screening information only and does not substitute for a clinical 12-lead diagnostic ECG conducted in a hospital.*`,
+      citations: [
+        {
+          sourceName: 'Heart Rhythm Society (HRS)',
+          publication: 'Clinical Guidance on Mobile & Wearable ECG Interpretation',
+          evidenceGrade: 'Grade A',
+        },
+      ],
+      isEmergencyAlert: false,
+    };
+  }
+
+  // Medical Info / Conditions / Summary
+  if (p.includes('medical') || p.includes('condition') || p.includes('allergy') || p.includes('profile') || p.includes('history')) {
+    const condNames = medicalProfile.conditions.map((c) => `• **${c.name}** (${c.status.toUpperCase()}) — ${c.notes}`).join('\n');
+    const allergies = medicalProfile.allergies.map((a) => `• **${a.substance}** (${a.severity.toUpperCase()}): ${a.reaction}`).join('\n');
+
+    return {
+      content: `**Summary of Your Medical Information (Sarah Jenkins):**\n\n**1. Chronic Conditions:**\n${condNames}\n\n**2. Documented Allergies:**\n${allergies}\n\n**3. Physical Baseline:**\n• **Blood Group:** O Positive (O+)\n• **Height & Weight:** 168 cm, 68 kg (BMI: 24.1 — Normal range)\n\n**4. Primary Care Team:**\n• **Attending Cardiologist:** Dr. Arvind Mehta, MD\n• **Emergency Contact:** David Jenkins (Spouse) — +1 (555) 234-5679\n\n*Nexus AI provides general health information and does not replace professional medical advice.*`,
+      citations: [
+        {
+          sourceName: 'Nexus Care Medical Profile System',
+          publication: 'Encrypted Patient Health Record Standards',
+        },
+      ],
+      isEmergencyAlert: false,
+    };
+  }
+
+  // Default response
   return {
-    content: `Thank you for your question about **"${userPrompt}"**.\n\nBased on clinical reference literature, maintaining consistent medication adherence, regular home vitals monitoring, and balanced nutrition are key pillars of long-term health.\n\nFor questions specific to dosage changes or acute physiological changes, Dr. Arvind Mehta can review your complete chart during your upcoming tele-consultation.`,
+    content: `Thank you for your question: **"${userPrompt}"**.\n\nBased on your health records, you are currently managing **Essential Hypertension** and **Type 2 Diabetes** (latest HbA1c 6.8%) under the care of **Dr. Arvind Mehta**. Your live biometrics show a heart rate of **${vitals.heartRate} bpm** and SpO2 of **${vitals.spO2}%**.\n\nFeel free to ask about your medication schedule, biometric readings, or diet recommendations.\n\n*Nexus AI provides general health information and does not replace professional medical advice.*`,
     citations: [
       {
-        sourceName: 'Nexus Evidence Knowledge Base',
-        publication: 'Integrated Primary Healthcare Guidelines',
+        sourceName: 'Nexus Clinical Knowledge Base',
+        publication: 'Evidence-Based Primary Care Guidelines',
       },
     ],
     isEmergencyAlert: false,
   };
 }
+
 
 interface AssistantState {
   messages: AssistantMessage[];

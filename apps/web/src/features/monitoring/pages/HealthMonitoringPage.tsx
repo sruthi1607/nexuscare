@@ -19,9 +19,13 @@ import {
   Info,
 } from 'lucide-react';
 import { useMonitoring } from '../monitoring-store';
+import { EmergencyActionHub } from '../components/EmergencyActionHub';
+import { EmergencyMap } from '../components/EmergencyMap';
+import { GeofenceControl } from '../components/GeofenceControl';
 
 export function HealthMonitoringPage() {
-  const { vitals, history, devices, mlAssessment, simulationMode, setSimulationMode } = useMonitoring();
+  const { vitals, history, devices, mlAssessment, simulationMode, setSimulationMode, dispatchAmbulance } = useMonitoring();
+
 
   // Generate SVG path for live chart waveform
   const maxHR = 130;
@@ -203,8 +207,20 @@ export function HealthMonitoringPage() {
         </div>
       </div>
 
+      {/* 4 Emergency Actions Hub */}
+      <EmergencyActionHub />
+
+      {/* Interactive Emergency Vector Map & Nearby Hospitals */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+        <EmergencyMap />
+      </div>
+
+      {/* Geo-Fencing Safe Zone Configuration & Breach Radar */}
+      <GeofenceControl />
+
       {/* Live ECG Waveform Chart */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+
         <div className="flex flex-col justify-between gap-2 border-b border-slate-100 pb-4 sm:flex-row sm:items-center">
           <div>
             <h2 className="text-base font-bold text-slate-900">Live Pulse & Rhythm Waveform</h2>

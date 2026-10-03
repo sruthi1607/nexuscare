@@ -139,6 +139,19 @@ export const routes: RouteObject[] = [
                 }),
                 [
                   {
+                    path: 'profile',
+                    lazy: async () => ({
+                      Component: (await import('../features/profile/pages/ProfilePage')).ProfilePage,
+                    }),
+                  },
+                  {
+                    path: 'profile/edit',
+                    lazy: async () => ({
+                      Component: (await import('../features/profile/pages/EditProfilePage'))
+                        .EditProfilePage,
+                    }),
+                  },
+                  {
                     path: 'medical',
                     lazy: async () => ({
                       Component: (
@@ -309,6 +322,20 @@ export const routes: RouteObject[] = [
                 }),
                 [
                   {
+                    path: 'profile',
+                    lazy: async () => ({
+                      Component: (await import('../features/profile/pages/ProfilePage'))
+                        .ProfilePage,
+                    }),
+                  },
+                  {
+                    path: 'profile/edit',
+                    lazy: async () => ({
+                      Component: (await import('../features/profile/pages/EditProfilePage'))
+                        .EditProfilePage,
+                    }),
+                  },
+                  {
                     path: 'professional',
                     lazy: async () => ({
                       Component: (
@@ -374,6 +401,20 @@ export const routes: RouteObject[] = [
                 }),
                 [
                   {
+                    path: 'profile',
+                    lazy: async () => ({
+                      Component: (await import('../features/profile/pages/ProfilePage'))
+                        .ProfilePage,
+                    }),
+                  },
+                  {
+                    path: 'profile/edit',
+                    lazy: async () => ({
+                      Component: (await import('../features/profile/pages/EditProfilePage'))
+                        .EditProfilePage,
+                    }),
+                  },
+                  {
                     path: 'patients',
                     lazy: async () => ({
                       Component: (
@@ -415,6 +456,20 @@ export const routes: RouteObject[] = [
                     .AdminDashboardPage,
                 }),
                 [
+                  {
+                    path: 'profile',
+                    lazy: async () => ({
+                      Component: (await import('../features/profile/pages/ProfilePage'))
+                        .ProfilePage,
+                    }),
+                  },
+                  {
+                    path: 'profile/edit',
+                    lazy: async () => ({
+                      Component: (await import('../features/profile/pages/EditProfilePage'))
+                        .EditProfilePage,
+                    }),
+                  },
                   {
                     path: 'users',
                     lazy: async () => ({

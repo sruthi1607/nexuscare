@@ -171,15 +171,15 @@ export function AiAssistantPage() {
       </div>
 
       {/* Mandatory Disclaimer Footer */}
-      <div className="border-t border-slate-100 bg-amber-50/50 px-6 py-2 text-[11px] text-amber-900 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <ShieldCheck className="size-3.5 text-amber-700 shrink-0" />
+      <div className="border-t border-slate-200 bg-amber-50/70 px-6 py-2.5 text-xs text-amber-950 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="size-4 text-amber-700 shrink-0" />
           <span>
-            <strong>Informational tool only.</strong> Not a clinical diagnosis. In an emergency, call 112/911.
+            <strong>Nexus AI provides general health information and does not replace professional medical advice.</strong>
           </span>
         </div>
-        <span className="text-[10px] font-medium text-amber-800 hidden sm:inline">
-          Connected to Sarah Jenkins's Health Context
+        <span className="text-[11px] font-medium text-amber-800 hidden sm:inline">
+          Connected to Sarah Jenkins's Live Telemetry
         </span>
       </div>
 
@@ -190,7 +190,16 @@ export function AiAssistantPage() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about medications, test results, symptoms, or diet..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (input.trim() && !isThinking) {
+                  sendMessage(input.trim());
+                  setInput('');
+                }
+              }
+            }}
+            placeholder="Ask about your heart rate, SpO2, blood pressure, medications, or test results..."
             className="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-hidden"
           />
           <button
@@ -206,3 +215,4 @@ export function AiAssistantPage() {
     </div>
   );
 }
+
