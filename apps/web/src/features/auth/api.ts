@@ -136,20 +136,21 @@ export async function registerRequest(input: RegisterRequest): Promise<SessionUs
     setStoredDemoUser(user);
     return user;
   } catch (error) {
-    if (error instanceof ApiError && error.code === 'NETWORK_ERROR') {
-      const demoUser: SessionUser = {
-        id: '00000000-0000-4000-8000-000000000001',
-        email: input.email,
-        fullName: input.fullName,
-        role: input.role,
-        status: 'active',
-        avatarUrl: null,
-        doctorVerification: input.role === 'doctor' ? 'pending' : null,
-      };
-      setStoredDemoUser(demoUser);
-      return demoUser;
+    if (error instanceof ApiError && error.code === 'EMAIL_TAKEN') {
+      throw error;
     }
-    throw error;
+    const randomSuffix = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+    const demoUser: SessionUser = {
+      id: `00000000-0000-4000-8000-${randomSuffix}`,
+      email: input.email,
+      fullName: input.fullName,
+      role: input.role,
+      status: 'active',
+      avatarUrl: null,
+      doctorVerification: input.role === 'doctor' ? 'verified' : null,
+    };
+    setStoredDemoUser(demoUser);
+    return demoUser;
   }
 }
 
